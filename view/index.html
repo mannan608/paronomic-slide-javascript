@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+   <meta charset="UTF-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <title>3D Curved Image Slider (Free)</title>
+
+   <!-- Tailwind CSS -->
+   <script src="https://cdn.tailwindcss.com"></script>
+
+   <!-- Three.js -->
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+   <style>
+      body {
+         margin: 0;
+         overflow: hidden;
+         background: radial-gradient(circle at center, #0f172a, #000);
+         height: 100vh;
+      }
+
+      .curved-slider {
+         width: 100%;
+         height: 100vh;
+         position: relative;
+         overflow: hidden;
+      }
+
+      .curved-slider canvas {
+         position: absolute;
+         top: 0;
+         left: 0;
+         display: block;
+      }
+
+      /* .slider-controls {
+         position: absolute;
+         bottom: 30px;
+         left: 50%;
+         transform: translateX(-50%);
+         display: flex;
+         gap: 20px;
+         z-index: 10;
+      }
+
+      .slider-button {
+         width: 50px;
+         height: 50px;
+         border-radius: 9999px;
+         background: rgba(255, 255, 255, 0.1);
+         color: #fff;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         cursor: pointer;
+         transition: all 0.3s ease;
+      }
+
+      .slider-button:hover {
+         background: rgba(255, 255, 255, 0.3);
+      } */
+   </style>
+</head>
+
+<body>
+   <div class="curved-slider" id="curvedSlider"></div>
+
+   <!-- <div class="slider-controls">
+      <div id="prevBtn" class="slider-button">◀</div>
+      <div id="nextBtn" class="slider-button">▶</div>
+   </div> -->
+
+   <script>
+      // === Config ===
+      const imageUrls = [
+         "https://picsum.photos/id/1015/800/600",
+         "https://picsum.photos/id/1016/800/600",
+         "https://picsum.photos/id/1018/800/600",
+         "https://picsum.photos/id/1019/800/600",
+         "https://picsum.photos/id/1020/800/600",
+         "https://picsum.photos/id/1021/800/600",
+         "https://picsum.photos/id/1022/800/600",
+         "https://picsum.photos/id/1023/800/600",
+         "https://picsum.photos/id/1024/800/600",
+         "https://picsum.photos/id/1025/800/600",
+         "https://picsum.photos/id/1026/800/600",
+         "https://picsum.photos/id/1027/800/600",
+         "https://picsum.photos/id/1028/800/600",
+         "https://picsum.photos/id/1029/800/600",
+         "https://picsum.photos/id/1030/800/600",
+      ];
+
+      const container = document.getElementById("curvedSlider");
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+         70,
+         window.innerWidth / window.innerHeight,
+         0.1,
+         1000
+      );
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      container.appendChild(renderer.domElement);
+
+      camera.position.z = 6;
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      // === Load Images as Planes ===
+      const loader = new THREE.TextureLoader();
+      const radius = 4; // Curvature radius
+      const angleStep = (Math.PI * 2) / imageUrls.length;
+
+      imageUrls.forEach((url, i) => {
+         loader.load(url, (texture) => {
+            const geometry = new THREE.PlaneGeometry(4, 2.5);
+            const material = new THREE.MeshBasicMaterial({ map: texture });
+            const plane = new THREE.Mesh(geometry, material);
+
+            const angle = i * angleStep;
+            plane.position.x = Math.sin(angle) * radius;
+            plane.position.z = Math.cos(angle) * radius;
+            plane.lookAt(new THREE.Vector3(0, 0, 0));
+            group.add(plane);
+         });
+      });
+
+      // === Animation + Controls ===
+      let rotationSpeed = 0;
+      const autoRotateSpeed = 0.003;
+
+      function animate() {
+         requestAnimationFrame(animate);
+         group.rotation.y += rotationSpeed || autoRotateSpeed;
+         renderer.render(scene, camera);
+      }
+
+      animate();
+
+      // === Resize Handling ===
+      window.addEventListener("resize", () => {
+         camera.aspect = window.innerWidth / window.innerHeight;
+         camera.updateProjectionMatrix();
+         renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // === Buttons ===
+      document.getElementById("prevBtn").addEventListener("click", () => {
+         gsap.to(group.rotation, { y: group.rotation.y - angleStep, duration: 1 });
+      });
+
+      document.getElementById("nextBtn").addEventListener("click", () => {
+         gsap.to(group.rotation, { y: group.rotation.y + angleStep, duration: 1 });
+      });
+
+      // === Optional: Pause on Hover ===
+      container.addEventListener("mouseenter", () => (rotationSpeed = 0));
+      container.addEventListener("mouseleave", () => (rotationSpeed = autoRotateSpeed));
+   </script>
+
+   <!-- GSAP -->
+   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+</body>
+
+</html>

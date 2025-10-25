@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+   <meta charset="UTF-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <title>3D Curved Image Slider with Blur</title>
+
+   <!-- Tailwind CSS -->
+   <script src="https://cdn.tailwindcss.com"></script>
+
+   <!-- Three.js -->
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+   <!-- GSAP for smooth easing -->
+   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+
+   <style>
+      body {
+         margin: 0;
+         overflow: hidden;
+         background: radial-gradient(circle at center, #0f172a, #000);
+         height: 100vh;
+      }
+
+      .curved-slider {
+         width: 100%;
+         height: 100vh;
+         position: relative;
+         overflow: hidden;
+      }
+
+      .curved-slider canvas {
+         position: absolute;
+         top: 0;
+         left: 0;
+         display: block;
+      }
+
+      .slider-controls {
+         position: absolute;
+         bottom: 30px;
+         left: 50%;
+         transform: translateX(-50%);
+         display: flex;
+         gap: 20px;
+         z-index: 10;
+      }
+
+      .slider-button {
+         width: 50px;
+         height: 50px;
+         border-radius: 9999px;
+         background: rgba(255, 255, 255, 0.1);
+         color: #fff;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         cursor: pointer;
+         transition: background 0.3s ease;
+      }
+
+      .slider-button:hover {
+         background: rgba(255, 255, 255, 0.3);
+      }
+   </style>
+</head>
+
+<body>
+   <div class="curved-slider" id="curvedSlider"></div>
+   <div class="slider-controls">
+      <div id="prevBtn" class="slider-button">◀</div>
+      <div id="nextBtn" class="slider-button">▶</div>
+   </div>
+
+   <script>
+      // === Configuration ===
+      const imageUrls = [
+         "https://picsum.photos/id/1015/800/600",
+         "https://picsum.photos/id/1016/800/600",
+         "https://picsum.photos/id/1018/800/600",
+         "https://picsum.photos/id/1019/800/600",
+         "https://picsum.photos/id/1020/800/600",
+         "https://picsum.photos/id/1021/800/600",
+      ];
+
+      const container = document.getElementById("curvedSlider");
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+         70,
+         window.innerWidth / window.innerHeight,
+         0.1,
+         1000
+      );
+      camera.position.z = 6;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      container.appendChild(renderer.domElement);
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      const loader = new THREE.TextureLoader();
+      const radius = 8;
+      const total = imageUrls.length;
+      const angleStep = (Math.PI * 2) / total;
+
+      const planes = [];
+
+      imageUrls.forEach((url, i) => {
+         loader.load(url, (texture) => {
+            const geometry = new THREE.PlaneGeometry(4, 2.5);
+            const material = new THREE.MeshBasicMaterial({ map: texture });
+            const plane = new THREE.Mesh(geometry, material);
+
+            const angle = i * angleStep;
+            plane.position.x = Math.sin(angle) * radius;
+            plane.position.z = Math.cos(angle) * radius;
+            plane.lookAt(0, 0, 0);
+
+            group.add(plane);
+            planes.push(plane);
+         });
+      });
+
+      let autoRotateSpeed = 0.003;
+      let isHovering = false;
+
+      function animate() {
+         requestAnimationFrame(animate);
+
+         // rotate
+         if (!isHovering) {
+            group.rotation.y += autoRotateSpeed;
+         }
+
+         // blur/fade effect
+         planes.forEach((plane) => {
+            const vec = plane.position.clone().applyMatrix4(group.matrixWorld);
+            // find angle/distance from front
+            const z = vec.z;
+            const blurAmount = Math.min(Math.max((radius - z) / radius, 0), 1);
+            plane.material.map && (plane.material.map.needsUpdate = true);
+            plane.material.transparent = true;
+            plane.material.opacity = 1 - blurAmount * 0.5;  // fade slightly
+            plane.material.blending = THREE.NormalBlending;
+            plane.material.depthWrite = false;
+
+            // Optionally apply CSS blur via shader or material, but simpler: reduce opacity for blur illusion
+         });
+
+         renderer.render(scene, camera);
+      }
+
+      animate();
+
+      window.addEventListener("resize", () => {
+         camera.aspect = window.innerWidth / window.innerHeight;
+         camera.updateProjectionMatrix();
+         renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // Controls
+      document.getElementById("prevBtn").addEventListener("click", () => {
+         gsap.to(group.rotation, {
+            y: group.rotation.y - angleStep,
+            duration: 1,
+            ease: "power2.inOut",
+         });
+      });
+
+      document.getElementById("nextBtn").addEventListener("click", () => {
+         gsap.to(group.rotation, {
+            y: group.rotation.y + angleStep,
+            duration: 1,
+            ease: "power2.inOut",
+         });
+      });
+
+      container.addEventListener("mouseenter", () => (isHovering = true));
+      container.addEventListener("mouseleave", () => (isHovering = false));
+   </script>
+</body>
+
+</html>
